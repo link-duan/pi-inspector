@@ -28,7 +28,8 @@
   "pi": {
     "extensions": [
       "./src/index.ts"
-    ]
+    ],
+    "image": "https://raw.githubusercontent.com/link-duan/pi-inspector/main/assets/pi-inspect-example.png"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
