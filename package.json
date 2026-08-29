@@ -1,6 +1,6 @@
 {
   "name": "pi-inspector",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Inspect the current pi session: live system prompt and full transcript dashboard in the browser",
   "type": "module",
   "license": "MIT",
