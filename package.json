@@ -1,0 +1,35 @@
+{
+  "name": "pi-inspector",
+  "version": "0.1.0",
+  "description": "Inspect the current pi session: live system prompt and full transcript dashboard in the browser",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "extension",
+    "inspect",
+    "debug"
+  ],
+  "files": [
+    "src/**/*.ts",
+    "src/**/*.html",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.84.3",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "highlight.js": "^11.12.0"
+  }
+}

@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pi-inspector</title>
+<link rel="stylesheet" href="/vendor/github-dark.css">
+<style>
+:root {
+  --bg: #0f1117;
+  --panel: #161a24;
+  --panel-2: #1c2230;
+  --border: #2a3144;
+  --text: #d7dbe5;
+  --muted: #8a93a8;
+  --accent: #58a6ff;
+  --user: #3fb950;
+  --assistant: #58a6ff;
+  --tool: #8b949e;
+  --other: #d29922;
+  --key: #79c0ff;
+  --str: #7ee787;
+  --num: #f0883e;
+  --bool: #ff7b72;
+  --null: #8b949e;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 13px/1.5 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+/* ── header ── */
+header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px; border-bottom: 1px solid var(--border);
+  background: var(--panel); flex: none;
+}
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+.dot.live { background: var(--user); box-shadow: 0 0 6px var(--user); }
+.dot.streaming { background: var(--other); animation: blink 1s infinite; }
+.dot.off { background: #f85149; }
+@keyframes blink { 50% { opacity: .35; } }
+.title { font-weight: 600; color: var(--accent); }
+#sessionId { color: var(--muted); font-size: 12px; }
+#model { color: var(--muted); font-size: 12px; }
+header .spacer { flex: 1; }
+#updatedAt { color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+/* ── layout ── */
+main { flex: 1; display: grid; grid-template-columns: var(--left-w, 38%) 1px 1fr; min-height: 0; }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } .vresizer { display: none; } }
+aside, #right { min-height: 0; overflow-y: auto; }
+aside { padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; }
+.vresizer {
+  position: relative; z-index: 10;
+  cursor: col-resize; background: var(--border);
+}
+.vresizer::before {
+  content: ""; position: absolute; top: 0; bottom: 0;
+  left: 50%; width: 4px; transform: translateX(-50%);
+  cursor: col-resize;
+}
+.vresizer:hover, body.resizing-col .vresizer { background: var(--accent); }
+body.resizing-col, body.resizing-col * { cursor: col-resize !important; user-select: none; }
+body.resizing-row, body.resizing-row * { cursor: row-resize !important; user-select: none; }
+
+/* ── panels ── */
+section, details {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden; flex: none;
+}
+details > summary {
+  cursor: pointer; list-style: none; padding: 8px 12px;
+  font-weight: 600; color: var(--accent); user-select: none;
+  display: flex; align-items: center; gap: 8px;
+}
+details > summary::before { content: "▸"; transition: transform .1s; color: var(--muted); }
+details[open] > summary::before { transform: rotate(90deg); }
+details > summary .meta { font-weight: 400; color: var(--muted); font-size: 12px; }
+details > summary .btn {
+  margin-left: auto; font-weight: 400; font-size: 12px; cursor: pointer;
+  color: var(--muted); border: 1px solid var(--border); border-radius: 4px;
+  padding: 1px 8px; background: var(--panel-2);
+}
+details > summary .btn:hover { color: var(--text); }
+
+/* ── meta card ── */
+#meta { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; padding: 10px 12px; font-size: 12px; }
+#meta .k { color: var(--muted); white-space: nowrap; }
+#meta .v { color: var(--text); word-break: break-all; }
+
+/* ── system prompt ── */
+#promptBox pre {
+  margin: 0; padding: 10px 12px; overflow: auto;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px; line-height: 1.55; white-space: pre-wrap; word-break: break-word;
+  max-height: 45vh;
+}
+#detailJson {
+  margin: 0; padding: 10px 12px; flex: 1; overflow: auto;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px; line-height: 1.55; white-space: pre-wrap; word-break: break-word;
+}
+#detailJson.hljs { background: transparent; padding: 10px 12px; }
+
+/* ── tool list ── */
+.list { padding: 4px 12px 10px; }
+.item { display: flex; flex-direction: column; gap: 3px; padding: 5px 0; border-bottom: 1px solid #222837; }
+.item:last-child { border-bottom: none; }
+.item .head { display: flex; align-items: baseline; gap: 8px; }
+.item .name { color: var(--accent); font-family: ui-monospace, Menlo, monospace; font-size: 12px; flex: none; }
+.item .desc { color: var(--muted); font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+.item .src { flex: none; font-size: 10px; color: var(--other); border: 1px solid var(--border); border-radius: 3px; padding: 0 4px; }
+
+/* ── right column ── */
+#right { display: flex; flex-direction: column; }
+#toolbar {
+  flex: none; display: flex; align-items: center; gap: 14px;
+  padding: 6px 12px; border-bottom: 1px solid var(--border);
+  background: var(--panel); font-size: 12px; color: var(--muted);
+}
+#toolbar label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+#tree { flex: 1; overflow-y: auto; padding: 6px 0; }
+.hresizer {
+  position: relative; z-index: 10; flex: none; height: 1px;
+  cursor: row-resize; background: var(--border);
+}
+.hresizer::before {
+  content: ""; position: absolute; left: 0; right: 0;
+  top: 50%; height: 4px; transform: translateY(-50%);
+  cursor: row-resize;
+}
+.hresizer:hover, body.resizing-row .hresizer { background: var(--accent); }
+#detail { flex: none; height: var(--detail-h, 42%); display: flex; flex-direction: column; border-top: 1px solid var(--border); background: var(--panel); }
+.detailHead { display: flex; align-items: center; gap: 10px; padding: 6px 12px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--border); }
+.detailHead .btn {
+  margin-left: auto; cursor: pointer; color: var(--muted); border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 8px; background: var(--panel-2); font-size: 12px;
+}
+.detailHead .btn:hover { color: var(--text); }
+
+/* ── tree nodes ── */
+.node {
+  display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 22px;
+  padding: 2px 10px; cursor: default; border-left: 2px solid transparent;
+  white-space: nowrap; overflow: hidden;
+}
+.node:hover { background: var(--panel-2); }
+.node.selected { background: #243349; }
+.node .tcell {
+  flex: none; align-self: stretch; width: 18px; position: relative;
+  --tline: #48526a;
+}
+.node.on-path .tcell { --tline: var(--accent); }
+.node .tcell.v::before, .node .tcell.vh::before {
+  content: ""; position: absolute; left: 9px; width: 1px; background: var(--tline);
+}
+.node .tcell.v::before { top: -2px; bottom: -2px; }
+.node .tcell.vh::before { top: -2px; height: calc(50% + 2px); }
+.node .tcell.h::after {
+  content: ""; position: absolute; top: 50%; left: 9px; right: 0; height: 1px; background: var(--tline);
+}
+.node .role {
+  flex: none; font-size: 10px; font-weight: 600; border-radius: 3px;
+  padding: 0 5px; line-height: 1.6; color: #0f1117;
+}
+.role-user { background: var(--user); }
+.role-assistant { background: var(--assistant); }
+.role-toolResult, .role-bashExecution, .role-tool { background: var(--tool); }
+.role-other { background: var(--other); }
+.node .id { flex: none; color: var(--muted); font-size: 11px; font-family: ui-monospace, Menlo, monospace; }
+.node .time { flex: none; color: #5c6474; font-size: 11px; }
+.node .summary { display: block; flex: 1; min-width: 0; color: var(--text); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+#empty { color: var(--muted); padding: 20px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <span class="dot" id="dot"></span>
+  <span class="title">pi-inspector</span>
+  <span id="sessionId" class="mono"></span>
+  <span id="model"></span>
+  <span class="spacer"></span>
+  <span id="updatedAt"></span>
+</header>
+<main>
+  <aside>
+    <section id="meta"></section>
+    <details id="promptBox">
+      <summary>System Prompt <span class="meta" id="promptMeta"></span><span class="btn" id="copyPrompt">Copy</span></summary>
+      <pre id="prompt"></pre>
+    </details>
+    <details id="toolsBox"><summary>Tools <span class="meta" id="toolsMeta"></span></summary><div class="list" id="tools"></div></details>
+  </aside>
+  <div class="vresizer" id="vresizer" title="Drag to resize width"></div>
+  <section id="right">
+    <div id="toolbar">
+      <span id="connState">Connecting…</span>
+      <label><input type="checkbox" id="follow" checked> Follow scroll</label>
+    </div>
+    <div id="tree"><div id="empty">Waiting for data…</div></div>
+    <div class="hresizer" id="hresizer" title="Drag to resize height"></div>
+    <div id="detail">
+      <div class="detailHead">Entry Detail <span id="detailId"></span><span class="btn" id="copyDetail">Copy JSON</span></div>
+      <pre id="detailJson" class="hljs"></pre>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+import hljs from "/vendor/core.js";
+import jsonLang from "/vendor/json.js";
+hljs.registerLanguage("json", jsonLang);
+
+const $ = (id) => document.getElementById(id);
+const state = { selectedId: null, follow: true, snap: null };
+
+/* ── utilities ── */
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function textOf(content) {
+  if (content == null) return "";
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content.map((b) => {
+      switch (b.type) {
+        case "text": return b.text;
+        case "thinking": return "…thinking…";
+        case "toolCall": return `⟦${b.name}⟧`;
+        default: return `[${b.type}]`;
+      }
+    }).join("\n");
+  }
+  return "";
+}
+function entrySummary(entry) {
+  if (entry.type !== "message") {
+    switch (entry.type) {
+      case "compaction": return "compact: " + (entry.summary || "").slice(0, 90);
+      case "branch_summary": return "branch: " + (entry.summary || "").slice(0, 90);
+      case "model_change": return entry.provider + "/" + entry.modelId;
+      case "thinking_level_change": return "thinking → " + entry.thinkingLevel;
+      case "custom": return entry.customType;
+      case "custom_message": return entry.customType + ": " + textOf(entry.content).slice(0, 80);
+      case "label": return "label: " + (entry.label || "") + " → " + entry.targetId;
+      case "session_info": return "name: " + (entry.name || "");
+      default: return entry.type;
+    }
+  }
+  const m = entry.message;
+  switch (m.role) {
+    case "user": return textOf(m.content);
+    case "assistant": return textOf(m.content).slice(0, 140);
+    case "toolResult": return (m.isError ? "✗ " : "✓ ") + m.toolName + "  " + textOf(m.content).slice(0, 70);
+    case "bashExecution": return "$ " + m.command + (m.output ? "  → " + m.output.slice(0, 50) : "");
+    case "custom": return m.customType + ": " + textOf(m.content).slice(0, 90);
+    default: return m.role;
+  }
+}
+function roleOf(entry) {
+  if (entry.type !== "message") return "other";
+  const r = entry.message.role;
+  if (r === "user" || r === "assistant") return r;
+  return "tool";
+}
+function fmtTime(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? "" : d.toLocaleTimeString();
+}
+function copyText(text) {
+  navigator.clipboard.writeText(text).catch(() => {});
+}
+
+/* ── renderers ── */
+function renderHeader(s) {
+  $("sessionId").textContent = "session " + (s.sessionId || "").slice(0, 8) + "…";
+  $("model").textContent = s.model ? `${s.model.provider}/${s.model.id}` : "";
+  $("updatedAt").textContent = "Updated " + new Date(s.capturedAt).toLocaleTimeString();
+  $("dot").className = "dot " + (s.idle ? "live" : "streaming");
+}
+
+function renderMeta(s) {
+  const rows = [
+    ["sessionId", s.sessionId || ""],
+    ["name", s.sessionName || ""],
+    ["cwd", s.cwd || ""],
+    ["file", s.sessionFile || "(ephemeral)"],
+    ["model", s.model ? `${s.model.provider}/${s.model.id}` : ""],
+    ["thinking", s.thinkingLevel || ""],
+    ["leaf", s.leafId || ""],
+    ["entries", String(s.entries ? s.entries.length : 0)],
+  ];
+  $("meta").innerHTML = rows.map(([k, v]) => `<span class="k">${k}</span><span class="v mono">${escapeHtml(v)}</span>`).join("");
+}
+
+function renderPrompt(s) {
+  const p = s.systemPrompt || "";
+  $("prompt").textContent = p;
+  $("promptMeta").textContent = `${p.length.toLocaleString()} chars`;
+}
+
+function renderList(el, items, fn) {
+  if (!items || items.length === 0) { el.innerHTML = ""; return; }
+  el.innerHTML = items.map(fn).join("");
+}
+
+function renderTools(s) {
+  const tools = s.tools || [];
+  $("toolsMeta").textContent = `(${tools.length})`;
+  renderList($("tools"), tools, (t) =>
+    `<div class="item"><div class="head"><span class="name">${escapeHtml(t.name)}</span><span class="src">${escapeHtml(t.sourceInfo?.source || "")}</span></div><span class="desc">${escapeHtml(t.description || "")}</span></div>`,
+  );
+}
+
+function activePathIds(s) {
+  const ids = new Set();
+  const byId = new Map((s.entries || []).map((e) => [e.id, e]));
+  let cur = s.leafId ? byId.get(s.leafId) : null;
+  while (cur) {
+    ids.add(cur.id);
+    if (!cur.parentId || cur.parentId === cur.id) break;
+    cur = byId.get(cur.parentId);
+  }
+  return ids;
+}
+
+// Sort children by timestamp so branch order is deterministic (matches pi's tree).
+function sortTree(nodes) {
+  nodes.sort((a, b) => new Date(a.entry.timestamp).getTime() - new Date(b.entry.timestamp).getTime());
+  for (const n of nodes) sortTree(n.children || []);
+}
+
+/* Flatten the session tree into rows with connector metadata.
+ * Ported from pi's tree-selector / export-html so linear chains stay flat and
+ * only real branch points add an indentation level with ├─/└─ connectors. */
+function flattenTree(roots, activeIds) {
+  const result = [];
+  const multipleRoots = roots.length > 1;
+
+  const containsActive = new Map();
+  const markActive = (node) => {
+    let has = activeIds.has(node.entry.id);
+    for (const child of node.children || []) if (markActive(child)) has = true;
+    containsActive.set(node, has);
+    return has;
+  };
+  roots.forEach(markActive);
+
+  // Stack: [node, indent, justBranched, showConnector, isLast, gutters, isVirtualRootChild]
+  const stack = [];
+  const orderedRoots = [...roots].sort(
+    (a, b) => Number(containsActive.get(b)) - Number(containsActive.get(a)),
+  );
+  for (let i = orderedRoots.length - 1; i >= 0; i--) {
+    const isLast = i === orderedRoots.length - 1;
+    stack.push([orderedRoots[i], multipleRoots ? 1 : 0, multipleRoots, multipleRoots, isLast, [], multipleRoots]);
+  }
+
+  while (stack.length > 0) {
+    const [node, indent, justBranched, showConnector, isLast, gutters, isVirtualRootChild] = stack.pop();
+    result.push({ node, indent, showConnector, isLast, gutters, isVirtualRootChild, multipleRoots });
+
+    const children = node.children || [];
+    const multipleChildren = children.length > 1;
+    const orderedChildren = [...children].sort(
+      (a, b) => Number(containsActive.get(b)) - Number(containsActive.get(a)),
+    );
+
+    let childIndent;
+    if (multipleChildren) childIndent = indent + 1;
+    else if (justBranched && indent > 0) childIndent = indent + 1;
+    else childIndent = indent;
+
+    const connectorDisplayed = showConnector && !isVirtualRootChild;
+    const currentDisplayIndent = multipleRoots ? Math.max(0, indent - 1) : indent;
+    const connectorPosition = Math.max(0, currentDisplayIndent - 1);
+    const childGutters = connectorDisplayed
+      ? [...gutters, { position: connectorPosition, show: !isLast }]
+      : gutters;
+
+    for (let i = orderedChildren.length - 1; i >= 0; i--) {
+      const childIsLast = i === orderedChildren.length - 1;
+      stack.push([orderedChildren[i], childIndent, multipleChildren, multipleChildren, childIsLast, childGutters, false]);
+    }
+  }
+  return result;
+}
+
+/* Build the connector cells (│ gutters + branch elbow) for one flattened row.
+ * Each cell is drawn with CSS lines instead of box-drawing characters:
+ *   v  = full-height vertical line (ancestor branch continues below)
+ *   vh = vertical line from top to middle (last child elbow)
+ *   h  = horizontal line from middle to the right edge (connector) */
+function buildTreeCells(flatNode) {
+  const { indent, showConnector, isLast, gutters, isVirtualRootChild, multipleRoots } = flatNode;
+  const displayIndent = multipleRoots ? Math.max(0, indent - 1) : indent;
+  const connector = showConnector && !isVirtualRootChild;
+  const connectorPosition = connector ? displayIndent - 1 : -1;
+
+  const cells = [];
+  for (let level = 0; level < displayIndent; level++) {
+    const gutter = gutters.find((g) => g.position === level);
+    if (gutter) {
+      cells.push(gutter.show ? "v" : "");
+    } else if (connector && level === connectorPosition) {
+      cells.push(isLast ? "vh h" : "v h");
+    } else {
+      cells.push("");
+    }
+  }
+  return cells;
+}
+
+function renderTree(s, scroll) {
+  const el = $("tree");
+  const tree = s.tree || [];
+  if (tree.length === 0) { el.innerHTML = '<div id="empty">(empty session)</div>'; return; }
+
+  sortTree(tree);
+  const activeIds = activePathIds(s);
+  const flat = flattenTree(tree, activeIds);
+
+  const lines = flat.map((fn) => {
+    const e = fn.node.entry;
+    const id = e.id;
+    const onPath = activeIds.has(id);
+    const cls = ["node", id === state.selectedId ? "selected" : "", onPath ? "on-path" : ""].filter(Boolean).join(" ");
+    const cells = buildTreeCells(fn).map((c) => `<span class="tcell ${c}"></span>`).join("");
+    return (
+      `<div class="${cls}" data-id="${escapeHtml(id)}">` +
+      cells +
+      `<span class="role role-${roleOf(e)}">${escapeHtml(roleOf(e))}</span>` +
+      `<span class="id">${escapeHtml(String(id).slice(0, 8))}</span>` +
+      `<span class="time">${escapeHtml(fmtTime(e.timestamp))}</span>` +
+      `<span class="summary">${escapeHtml(entrySummary(e))}</span></div>`
+    );
+  });
+
+  el.innerHTML = lines.join("");
+  el.onclick = (ev) => {
+    const node = ev.target.closest(".node");
+    if (node) {
+      state.selectedId = node.dataset.id;
+      el.querySelectorAll(".node").forEach((n) => n.classList.toggle("selected", n.dataset.id === state.selectedId));
+      renderDetail(state.snap);
+    }
+  };
+  if (scroll && state.follow) el.scrollTop = el.scrollHeight;
+}
+
+function renderDetail(s) {
+  if (!s || !state.selectedId) { $("detailJson").textContent = ""; $("detailId").textContent = ""; return; }
+  const entry = (s.entries || []).find((e) => e.id === state.selectedId);
+  if (!entry) { $("detailJson").textContent = ""; $("detailId").textContent = ""; return; }
+  $("detailId").textContent = state.selectedId;
+  $("detailJson").innerHTML = hljs.highlight(JSON.stringify(entry, null, 2), { language: "json" }).value;
+}
+
+function renderAll(s, scroll) {
+  state.snap = s;
+  renderHeader(s);
+  renderMeta(s);
+  renderPrompt(s);
+  renderTools(s);
+  renderTree(s, scroll);
+  renderDetail(s);
+}
+
+/* ── panel resizing ── */
+function initResizer(handle, dir, apply) {
+  handle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    const start = dir === "col" ? e.clientX : e.clientY;
+    const cls = dir === "col" ? "resizing-col" : "resizing-row";
+    document.body.classList.add(cls);
+    const move = (ev) => apply(dir === "col" ? ev.clientX : ev.clientY, start);
+    const up = () => {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+      document.body.classList.remove(cls);
+    };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  });
+}
+initResizer($("vresizer"), "col", (x) => {
+  const rect = document.querySelector("main").getBoundingClientRect();
+  const pct = Math.min(80, Math.max(15, ((x - rect.left) / rect.width) * 100));
+  document.documentElement.style.setProperty("--left-w", pct + "%");
+  localStorage.setItem("inspect.leftW", String(pct));
+});
+initResizer($("hresizer"), "row", (y) => {
+  const rect = $("right").getBoundingClientRect();
+  const h = Math.min(rect.height * 0.8, Math.max(120, rect.bottom - y));
+  document.documentElement.style.setProperty("--detail-h", h + "px");
+  localStorage.setItem("inspect.detailH", String(h));
+});
+const savedLeft = localStorage.getItem("inspect.leftW");
+if (savedLeft) document.documentElement.style.setProperty("--left-w", savedLeft + "%");
+const savedDetail = localStorage.getItem("inspect.detailH");
+if (savedDetail) document.documentElement.style.setProperty("--detail-h", savedDetail + "px");
+
+/* ── events ── */
+$("copyPrompt").onclick = () => copyText(state.snap?.systemPrompt || "");
+$("copyDetail").onclick = () => {
+  const entry = (state.snap?.entries || []).find((e) => e.id === state.selectedId);
+  if (entry) copyText(JSON.stringify(entry, null, 2));
+};
+$("follow").onchange = (e) => { state.follow = e.target.checked; };
+
+const es = new EventSource("/events");
+es.onopen = () => { $("connState").textContent = "Connected"; };
+es.onerror = () => { $("connState").textContent = "Disconnected, reconnecting…"; $("dot").className = "dot off"; };
+es.onmessage = (ev) => {
+  try {
+    const s = JSON.parse(ev.data);
+    $("connState").textContent = "Connected";
+    renderAll(s, true);
+  } catch (err) { console.error("bad snapshot", err); }
+};
+</script>
+</body>
+</html>
