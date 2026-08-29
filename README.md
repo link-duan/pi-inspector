@@ -2,6 +2,8 @@
 
 Inspect the current pi session in your browser: live system prompt, full transcript with every internal field, commands, and tools.
 
+![pi-inspector screenshot](assets/pi-inspect-example.png)
+
 ## Install
 
 ```bash
