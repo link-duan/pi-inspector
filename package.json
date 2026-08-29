@@ -12,6 +12,14 @@
     "inspect",
     "debug"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/link-duan/pi-inspector.git"
+  },
+  "homepage": "https://github.com/link-duan/pi-inspector#readme",
+  "bugs": {
+    "url": "https://github.com/link-duan/pi-inspector/issues"
+  },
   "files": [
     "src/**/*.ts",
     "src/**/*.html",
