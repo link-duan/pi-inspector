@@ -2,43 +2,54 @@
   "name": "pi-inspector",
   "version": "0.1.2",
   "description": "Inspect the current pi session: live system prompt and full transcript dashboard in the browser",
-  "type": "module",
-  "license": "MIT",
   "keywords": [
-    "pi-package",
-    "pi",
-    "pi-coding-agent",
+    "debug",
     "extension",
     "inspect",
-    "debug"
+    "pi",
+    "pi-coding-agent",
+    "pi-package"
   ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/link-duan/pi-inspector.git"
-  },
   "homepage": "https://github.com/link-duan/pi-inspector#readme",
   "bugs": {
     "url": "https://github.com/link-duan/pi-inspector/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/link-duan/pi-inspector.git"
   },
   "files": [
     "src/**/*.ts",
     "src/**/*.html",
     "README.md"
   ],
+  "type": "module",
+  "scripts": {
+    "check": "bun run typecheck && bun run lint && bun run format:check",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint src",
+    "lint:fix": "oxlint --fix src",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "highlight.js": "^11.12.0"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.84.3",
+    "lefthook": "^2.1.12",
+    "oxfmt": "^0.66.0",
+    "oxlint": "^1.81.0",
+    "typescript": "^5.6.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
   "pi": {
     "extensions": [
       "./src/index.ts"
     ],
     "image": "https://raw.githubusercontent.com/link-duan/pi-inspector/main/assets/pi-inspect-example.png"
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*"
-  },
-  "devDependencies": {
-    "@earendil-works/pi-coding-agent": "^0.84.3",
-    "typescript": "^5.6.0"
-  },
-  "dependencies": {
-    "highlight.js": "^11.12.0"
   }
 }

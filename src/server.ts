@@ -1,4 +1,9 @@
-import { createServer, type Server as HttpServer, type IncomingMessage, type ServerResponse } from "node:http";
+import {
+	createServer,
+	type Server as HttpServer,
+	type IncomingMessage,
+	type ServerResponse,
+} from "node:http";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
@@ -10,14 +15,20 @@ const require = createRequire(import.meta.url);
 const hljsRoot = dirname(require.resolve("highlight.js/package.json"));
 const hljsFile = (rel: string): string => readFileSync(join(hljsRoot, rel), "utf8");
 
-const HTML = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "web", "index.html"), "utf8");
+const HTML = readFileSync(
+	join(dirname(fileURLToPath(import.meta.url)), "web", "index.html"),
+	"utf8",
+);
 
 /** Vendor assets served to the browser (from node_modules, no build step).
  *  lib/core.js is CJS; wrap it in a shim so the browser ESM loader gets a default export. */
 const VENDOR: Record<string, { type: string; body: string }> = {
 	"/vendor/core.js": {
 		type: "text/javascript",
-		body: "var module = { exports: {} };\nvar exports = module.exports;\n" + hljsFile("lib/core.js") + "\nexport default module.exports;",
+		body:
+			"var module = { exports: {} };\nvar exports = module.exports;\n" +
+			hljsFile("lib/core.js") +
+			"\nexport default module.exports;",
 	},
 	"/vendor/json.js": { type: "text/javascript", body: hljsFile("es/languages/json.js") },
 	"/vendor/github-dark.css": { type: "text/css", body: hljsFile("styles/github-dark.css") },

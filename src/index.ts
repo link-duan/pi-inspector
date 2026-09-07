@@ -58,9 +58,9 @@ function schedulePush(builder: () => unknown): void {
 	if (pushTimer) return;
 	pushTimer = setTimeout(() => {
 		pushTimer = undefined;
-		const builder = pendingBuilder;
+		const pending = pendingBuilder;
 		pendingBuilder = undefined;
-		if (server?.isRunning() && builder) server.push(builder());
+		if (server?.isRunning() && pending) server.push(pending());
 	}, 100);
 }
 
