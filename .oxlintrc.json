@@ -6,8 +6,10 @@
     "perf": "deny"
   },
   "env": {
-    "node": true
+    "node": true,
+    "browser": true
   },
+  "ignorePatterns": ["src/web/dist/**"],
   "rules": {
     "eqeqeq": "deny",
     "no-console": "deny",

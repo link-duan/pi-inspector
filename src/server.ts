@@ -4,34 +4,25 @@ import {
 	type IncomingMessage,
 	type ServerResponse,
 } from "node:http";
-import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const require = createRequire(import.meta.url);
+const webDir = join(dirname(fileURLToPath(import.meta.url)), "web");
+const distDir = join(webDir, "dist");
+const htmlPath = join(webDir, "index.html");
 
-/** Resolve files inside the highlight.js package (exports map only allows lib/*, styles/*, package.json). */
-const hljsRoot = dirname(require.resolve("highlight.js/package.json"));
-const hljsFile = (rel: string): string => readFileSync(join(hljsRoot, rel), "utf8");
-
-const HTML = readFileSync(
-	join(dirname(fileURLToPath(import.meta.url)), "web", "index.html"),
-	"utf8",
-);
-
-/** Vendor assets served to the browser (from node_modules, no build step).
- *  lib/core.js is CJS; wrap it in a shim so the browser ESM loader gets a default export. */
-const VENDOR: Record<string, { type: string; body: string }> = {
-	"/vendor/core.js": {
-		type: "text/javascript",
-		body:
-			"var module = { exports: {} };\nvar exports = module.exports;\n" +
-			hljsFile("lib/core.js") +
-			"\nexport default module.exports;",
-	},
-	"/vendor/json.js": { type: "text/javascript", body: hljsFile("es/languages/json.js") },
-	"/vendor/github-dark.css": { type: "text/css", body: hljsFile("styles/github-dark.css") },
+const MIME_TYPES: Record<string, string> = {
+	".html": "text/html; charset=utf-8",
+	".js": "application/javascript; charset=utf-8",
+	".mjs": "application/javascript; charset=utf-8",
+	".css": "text/css; charset=utf-8",
+	".json": "application/json; charset=utf-8",
+	".png": "image/png",
+	".jpg": "image/jpeg",
+	".jpeg": "image/jpeg",
+	".svg": "image/svg+xml",
+	".ico": "image/x-icon",
 };
 
 export interface InspectServer {
@@ -87,15 +78,28 @@ export function createInspectServer(): InspectServer {
 			return;
 		}
 
-		const vendor = VENDOR[path];
-		if (vendor) {
-			res.writeHead(200, { "Content-Type": vendor.type });
-			res.end(vendor.body);
+		if (path.startsWith("/dist/")) {
+			const rel = path.slice(6);
+			const filePath = join(distDir, rel);
+			if (existsSync(filePath)) {
+				const ext = extname(filePath).toLowerCase();
+				res.writeHead(200, {
+					"Content-Type": MIME_TYPES[ext] ?? "application/octet-stream",
+					"Cache-Control": "public, max-age=31536000, immutable",
+				});
+				res.end(readFileSync(filePath));
+				return;
+			}
+		}
+
+		if (existsSync(htmlPath)) {
+			res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+			res.end(readFileSync(htmlPath, "utf8"));
 			return;
 		}
 
-		res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-		res.end(HTML);
+		res.writeHead(404, { "Content-Type": "text/plain" });
+		res.end("Not Found");
 	});
 
 	return {

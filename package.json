@@ -21,12 +21,18 @@
   },
   "files": [
     "src/**/*.ts",
+    "src/**/*.tsx",
     "src/**/*.html",
+    "src/**/*.css",
+    "src/web/dist/**",
     "README.md"
   ],
   "type": "module",
   "scripts": {
-    "check": "bun run typecheck && bun run lint && bun run format:check",
+    "build": "bun run build:web",
+    "build:web": "bun build src/web/src/index.tsx --outdir src/web/dist --target=browser --minify",
+    "check": "bun run build:web && bun run typecheck && bun run lint && bun run format:check",
+    "dev:web": "bun build src/web/src/index.tsx --outdir src/web/dist --target=browser --watch",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "lint": "oxlint src",
@@ -34,10 +40,15 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "highlight.js": "^11.12.0"
+    "highlight.js": "^11.12.0",
+    "lucide-react": "^1.41.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^0.84.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
     "lefthook": "^2.1.12",
     "oxfmt": "^0.66.0",
     "oxlint": "^1.81.0",
