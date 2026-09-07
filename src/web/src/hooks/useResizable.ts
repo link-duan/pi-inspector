@@ -79,6 +79,18 @@ export function useResizable() {
 		}
 	}, [isResizingRow]);
 
+	const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+		return localStorage.getItem("inspect.sidebarCollapsed") === "true";
+	});
+
+	const toggleSidebarCollapse = useCallback(() => {
+		setSidebarCollapsed((prev) => {
+			const next = !prev;
+			localStorage.setItem("inspect.sidebarCollapsed", String(next));
+			return next;
+		});
+	}, []);
+
 	return {
 		leftW,
 		detailH,
@@ -88,5 +100,8 @@ export function useResizable() {
 		startRowResize,
 		isResizingCol,
 		isResizingRow,
+		sidebarCollapsed,
+		setSidebarCollapsed,
+		toggleSidebarCollapse,
 	};
 }

@@ -12,8 +12,16 @@ import { Resizer } from "./components/common/Resizer.tsx";
 
 export const App: React.FC = () => {
 	const { snapshot, status, lastUpdated, refresh } = useInspectEvents();
-	const { leftW, detailH, containerRef, rightPaneRef, startColResize, startRowResize } =
-		useResizable();
+	const {
+		leftW,
+		detailH,
+		containerRef,
+		rightPaneRef,
+		startColResize,
+		startRowResize,
+		sidebarCollapsed,
+		toggleSidebarCollapse,
+	} = useResizable();
 
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [filterRole, setFilterRole] = useState<"all" | NormalizedRole | "error">("all");
@@ -40,12 +48,26 @@ export const App: React.FC = () => {
 
 	return (
 		<div className="app-layout">
-			<Header snapshot={snapshot} status={status} lastUpdated={lastUpdated} onRefresh={refresh} />
+			<Header
+				snapshot={snapshot}
+				status={status}
+				lastUpdated={lastUpdated}
+				onRefresh={refresh}
+				sidebarCollapsed={sidebarCollapsed}
+				onToggleSidebar={toggleSidebarCollapse}
+			/>
 
 			<main className="app-main" ref={containerRef}>
-				<Sidebar snapshot={snapshot} widthPercent={leftW} />
-
-				<Resizer direction="col" onMouseDown={startColResize} />
+				{!sidebarCollapsed && (
+					<>
+						<Sidebar
+							snapshot={snapshot}
+							widthPercent={leftW}
+							onToggleCollapse={toggleSidebarCollapse}
+						/>
+						<Resizer direction="col" onMouseDown={startColResize} />
+					</>
+				)}
 
 				<section className="app-right-pane" ref={rightPaneRef}>
 					<TreeToolbar

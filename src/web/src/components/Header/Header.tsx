@@ -1,5 +1,4 @@
-import React from "react";
-import { Cpu, Terminal, Clock, RefreshCw } from "lucide-react";
+import { Cpu, Terminal, Clock, RefreshCw, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { SessionSnapshot } from "../../types.ts";
 import type { ConnectionStatus } from "../../hooks/useInspectEvents.ts";
 
@@ -8,9 +7,18 @@ interface HeaderProps {
 	status: ConnectionStatus;
 	lastUpdated: Date | null;
 	onRefresh?: () => void;
+	sidebarCollapsed?: boolean;
+	onToggleSidebar?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ snapshot, status, lastUpdated, onRefresh }) => {
+export const Header: React.FC<HeaderProps> = ({
+	snapshot,
+	status,
+	lastUpdated,
+	onRefresh,
+	sidebarCollapsed,
+	onToggleSidebar,
+}) => {
 	const isIdle = snapshot?.idle ?? true;
 
 	const dotClass = (() => {
@@ -32,6 +40,17 @@ export const Header: React.FC<HeaderProps> = ({ snapshot, status, lastUpdated, o
 	return (
 		<header className="app-header">
 			<div className="header-left">
+				{onToggleSidebar && (
+					<button
+						type="button"
+						onClick={onToggleSidebar}
+						className={`header-icon-btn sidebar-toggle-btn ${sidebarCollapsed ? "is-collapsed" : ""}`}
+						title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+					>
+						{sidebarCollapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+					</button>
+				)}
+
 				<div className="brand">
 					<span className={dotClass} title={`Connection: ${statusLabel}`} />
 					<span className="brand-title">pi-inspector</span>
