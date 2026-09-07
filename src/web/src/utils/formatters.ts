@@ -71,7 +71,7 @@ export function entrySummary(entry: SessionEntry): string {
 				return `name: ${se.name || ""}`;
 			}
 			default:
-				return entry.type;
+				return (entry as { type?: string }).type || "unknown";
 		}
 	}
 

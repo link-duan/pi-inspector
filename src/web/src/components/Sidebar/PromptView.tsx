@@ -1,6 +1,11 @@
 import React, { useState, useMemo } from "react";
-import { Search, WrapText, X } from "lucide-react";
+import { Search, WrapText, X, Code } from "lucide-react";
 import { CopyButton } from "../common/CopyButton.tsx";
+import {
+	highlightMarkdownAndXml,
+	highlightSearchInHtml,
+	escapeHtml,
+} from "../../utils/highlighter.ts";
 
 interface PromptViewProps {
 	prompt?: string;
@@ -8,6 +13,7 @@ interface PromptViewProps {
 
 export const PromptView: React.FC<PromptViewProps> = ({ prompt = "" }) => {
 	const [wrap, setWrap] = useState(true);
+	const [syntaxHighlight, setSyntaxHighlight] = useState(true);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -28,26 +34,18 @@ export const PromptView: React.FC<PromptViewProps> = ({ prompt = "" }) => {
 		return count;
 	}, [prompt, searchQuery]);
 
-	const renderedContent = useMemo(() => {
-		if (!prompt) return null;
-		const q = searchQuery.trim();
-		if (!q) return prompt;
+	const baseHtml = useMemo(() => {
+		if (!prompt) return "";
+		if (syntaxHighlight) {
+			return highlightMarkdownAndXml(prompt);
+		}
+		return escapeHtml(prompt);
+	}, [prompt, syntaxHighlight]);
 
-		const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-		const regex = new RegExp(`(${escaped})`, "gi");
-		const parts = prompt.split(regex);
-
-		return parts.map((part, idx) => {
-			if (part.toLowerCase() === q.toLowerCase()) {
-				return (
-					<mark key={idx} className="search-highlight">
-						{part}
-					</mark>
-				);
-			}
-			return part;
-		});
-	}, [prompt, searchQuery]);
+	const renderedHtml = useMemo(() => {
+		if (!baseHtml) return "";
+		return highlightSearchInHtml(baseHtml, searchQuery);
+	}, [baseHtml, searchQuery]);
 
 	return (
 		<div className="prompt-view">
@@ -59,6 +57,15 @@ export const PromptView: React.FC<PromptViewProps> = ({ prompt = "" }) => {
 				</div>
 
 				<div className="view-actions">
+					<button
+						type="button"
+						onClick={() => setSyntaxHighlight((s) => !s)}
+						className={`action-btn-icon ${syntaxHighlight ? "active" : ""}`}
+						title={syntaxHighlight ? "Disable syntax highlighting" : "Enable syntax highlighting"}
+					>
+						<Code size={13} />
+					</button>
+
 					<button
 						type="button"
 						onClick={() => {
@@ -116,7 +123,10 @@ export const PromptView: React.FC<PromptViewProps> = ({ prompt = "" }) => {
 
 			<div className="prompt-content-area">
 				{prompt ? (
-					<pre className={`prompt-pre mono ${wrap ? "wrap" : "nowrap"}`}>{renderedContent}</pre>
+					<pre
+						className={`prompt-pre ${syntaxHighlight ? "hljs" : ""} mono ${wrap ? "wrap" : "nowrap"}`}
+						dangerouslySetInnerHTML={{ __html: renderedHtml }}
+					/>
 				) : (
 					<div className="empty-state-view">
 						<span>No system prompt recorded for this session</span>

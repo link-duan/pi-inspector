@@ -2,6 +2,7 @@ import React from "react";
 import { Terminal, Folder, Cpu, Layers } from "lucide-react";
 import type { SessionSnapshot } from "../../types.ts";
 import { CopyButton } from "../common/CopyButton.tsx";
+import { MiddleEllipsis } from "../common/MiddleEllipsis.tsx";
 
 interface SessionViewProps {
 	snapshot: SessionSnapshot | null;
@@ -37,10 +38,13 @@ export const SessionView: React.FC<SessionViewProps> = ({ snapshot }) => {
 						<div className="session-tile">
 							<span className="session-tile-label">Session ID</span>
 							<div className="session-tile-row">
-								<span className="session-tile-val mono" title={snapshot.sessionId}>
-									{snapshot.sessionId || "–"}
-								</span>
-								{snapshot.sessionId && <CopyButton text={snapshot.sessionId} label="Copy ID" />}
+								<MiddleEllipsis
+									text={snapshot.sessionId}
+									endChars={12}
+									className="mono"
+									fallback="–"
+								/>
+								{snapshot.sessionId && <CopyButton text={snapshot.sessionId} iconOnly />}
 							</div>
 						</div>
 
@@ -56,10 +60,13 @@ export const SessionView: React.FC<SessionViewProps> = ({ snapshot }) => {
 						<div className="session-tile">
 							<span className="session-tile-label">Current Leaf Entry</span>
 							<div className="session-tile-row">
-								<span className="session-tile-val mono" title={snapshot.leafId}>
-									{snapshot.leafId || "–"}
-								</span>
-								{snapshot.leafId && <CopyButton text={snapshot.leafId} label="Copy Leaf" />}
+								<MiddleEllipsis
+									text={snapshot.leafId}
+									endChars={12}
+									className="mono"
+									fallback="–"
+								/>
+								{snapshot.leafId && <CopyButton text={snapshot.leafId} iconOnly />}
 							</div>
 						</div>
 
@@ -84,22 +91,21 @@ export const SessionView: React.FC<SessionViewProps> = ({ snapshot }) => {
 						<div className="session-tile session-tile-full">
 							<span className="session-tile-label">Working Directory (CWD)</span>
 							<div className="session-tile-row">
-								<span className="session-tile-val mono" title={snapshot.cwd}>
-									{snapshot.cwd || "–"}
-								</span>
-								{snapshot.cwd && <CopyButton text={snapshot.cwd} label="Copy CWD" />}
+								<MiddleEllipsis text={snapshot.cwd} endChars={18} className="mono" fallback="–" />
+								{snapshot.cwd && <CopyButton text={snapshot.cwd} iconOnly />}
 							</div>
 						</div>
 
 						<div className="session-tile session-tile-full">
 							<span className="session-tile-label">Session Storage File</span>
 							<div className="session-tile-row">
-								<span className="session-tile-val mono" title={snapshot.sessionFile}>
-									{snapshot.sessionFile || "(in-memory ephemeral)"}
-								</span>
-								{snapshot.sessionFile && (
-									<CopyButton text={snapshot.sessionFile} label="Copy path" />
-								)}
+								<MiddleEllipsis
+									text={snapshot.sessionFile}
+									endChars={18}
+									className="mono"
+									fallback="(in-memory ephemeral)"
+								/>
+								{snapshot.sessionFile && <CopyButton text={snapshot.sessionFile} iconOnly />}
 							</div>
 						</div>
 					</div>

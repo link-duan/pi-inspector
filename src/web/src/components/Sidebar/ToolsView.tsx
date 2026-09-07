@@ -8,13 +8,10 @@ import {
 	UnfoldVertical,
 	FoldVertical,
 } from "lucide-react";
-import hljs from "highlight.js/lib/core";
-import json from "highlight.js/lib/languages/json";
 import type { ToolInfo } from "../../types.ts";
 import { jsonText } from "../../utils/formatters.ts";
 import { CopyButton } from "../common/CopyButton.tsx";
-
-hljs.registerLanguage("json", json);
+import { highlightJson } from "../../utils/highlighter.ts";
 
 interface ToolsViewProps {
 	tools?: ToolInfo[];
@@ -142,15 +139,7 @@ export const ToolsView: React.FC<ToolsViewProps> = ({ tools = [], activeTools })
 						const isActive = activeSet ? activeSet.has(t.name) : true;
 						const schemaJson = hasParams ? jsonText(t.parameters) : "";
 
-						const highlightedSchema = hasParams
-							? (() => {
-									try {
-										return hljs.highlight(schemaJson, { language: "json" }).value;
-									} catch {
-										return schemaJson;
-									}
-								})()
-							: "";
+						const highlightedSchema = hasParams ? highlightJson(schemaJson) : "";
 
 						const paramCount =
 							t.parameters &&

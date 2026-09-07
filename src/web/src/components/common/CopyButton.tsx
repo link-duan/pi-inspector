@@ -51,8 +51,8 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
 		<button
 			type="button"
 			onClick={handleCopy}
-			className={`action-btn ${copied ? "action-btn-success" : ""} ${className}`}
-			title={title}
+			className={`action-btn ${iconOnly ? "action-btn-icon-only" : ""} ${copied ? "action-btn-success" : ""} ${className}`}
+			title={copied ? "Copied!" : title}
 		>
 			{copied ? <Check size={12} className="btn-icon" /> : <Copy size={12} className="btn-icon" />}
 			{!iconOnly && <span>{copied ? "Copied" : label}</span>}

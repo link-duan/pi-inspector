@@ -1,16 +1,28 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import type { SessionEntry } from "../../types.ts";
 import { OverviewTab } from "./OverviewTab.tsx";
 import { RawTab } from "./RawTab.tsx";
 import { CopyButton } from "../common/CopyButton.tsx";
+import { buildToolPairIndex } from "../../utils/toolPairing.ts";
 
 interface DetailPanelProps {
 	entry: SessionEntry | null;
 	heightPx: number;
+	entries?: SessionEntry[];
+	onNavigateToEntry?: (id: string) => void;
+	searchQuery?: string;
 }
 
-export const DetailPanel: React.FC<DetailPanelProps> = ({ entry, heightPx }) => {
+export const DetailPanel: React.FC<DetailPanelProps> = ({
+	entry,
+	heightPx,
+	entries,
+	onNavigateToEntry,
+	searchQuery = "",
+}) => {
 	const [activeTab, setActiveTab] = useState<"overview" | "raw">("overview");
+
+	const toolPairIndex = useMemo(() => buildToolPairIndex(entries ?? []), [entries]);
 
 	const entryJson = entry ? JSON.stringify(entry, null, 2) : "";
 
@@ -51,9 +63,17 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({ entry, heightPx }) => 
 					<CopyButton text={entryJson} label="Copy JSON" />
 				</div>
 			</div>
-
 			<div className="detail-content-area">
-				{activeTab === "overview" ? <OverviewTab entry={entry} /> : <RawTab entry={entry} />}
+				{activeTab === "overview" ? (
+					<OverviewTab
+						entry={entry}
+						toolPairIndex={toolPairIndex}
+						onNavigateToEntry={onNavigateToEntry}
+						searchQuery={searchQuery}
+					/>
+				) : (
+					<RawTab entry={entry} />
+				)}
 			</div>
 		</section>
 	);

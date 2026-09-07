@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import type { NormalizedRole } from "./types.ts";
 import { useInspectEvents } from "./hooks/useInspectEvents.ts";
 import { useResizable } from "./hooks/useResizable.ts";
@@ -6,7 +6,7 @@ import { useTreeLayout } from "./hooks/useTreeLayout.ts";
 import { Header } from "./components/Header/Header.tsx";
 import { Sidebar } from "./components/Sidebar/Sidebar.tsx";
 import { TreeToolbar } from "./components/Tree/TreeToolbar.tsx";
-import { TreeView } from "./components/Tree/TreeView.tsx";
+import { TreeView, type TreeViewHandle } from "./components/Tree/TreeView.tsx";
 import { DetailPanel } from "./components/Detail/DetailPanel.tsx";
 import { Resizer } from "./components/common/Resizer.tsx";
 
@@ -46,6 +46,14 @@ export const App: React.FC = () => {
 		return (snapshot.entries || []).find((e) => e.id === selectedId) ?? null;
 	}, [snapshot, selectedId]);
 
+	const treeViewRef = useRef<TreeViewHandle>(null);
+
+	// Explicit navigation triggered by real user DOM click events (e.g. jump to caller or result)
+	const handleNavigateToEntry = useCallback((id: string) => {
+		setSelectedId(id);
+		treeViewRef.current?.scrollToEntry(id, "smooth");
+	}, []);
+
 	return (
 		<div className="app-layout">
 			<Header
@@ -82,6 +90,7 @@ export const App: React.FC = () => {
 					/>
 
 					<TreeView
+						ref={treeViewRef}
 						flatNodes={flatNodes}
 						selectedId={selectedId}
 						onSelectId={setSelectedId}
@@ -91,7 +100,13 @@ export const App: React.FC = () => {
 
 					<Resizer direction="row" onMouseDown={startRowResize} />
 
-					<DetailPanel entry={selectedEntry} heightPx={detailH} />
+					<DetailPanel
+						entry={selectedEntry}
+						heightPx={detailH}
+						entries={snapshot?.entries}
+						onNavigateToEntry={handleNavigateToEntry}
+						searchQuery={searchQuery}
+					/>
 				</section>
 			</main>
 		</div>

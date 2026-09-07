@@ -211,9 +211,10 @@ export function useTreeLayout(
 					} else if (msg.role === "assistant" && Boolean(msg.errorMessage)) {
 						isErr = true;
 					}
-				} else if (e.type === "session_compact_failed") {
+				} else if ((e as { type: string }).type === "session_compact_failed") {
 					isErr = true;
 				}
+
 				if (!isErr) return false;
 			} else if (filterRole !== "all" && item.role !== filterRole) {
 				return false;
