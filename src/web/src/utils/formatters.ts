@@ -19,13 +19,14 @@ export function textOf(content: unknown): string {
 					case "text":
 						return typeof b.text === "string" ? b.text : "";
 					case "thinking":
-						return "…thinking…";
+						return "";
 					case "toolCall":
-						return `⟦${(b as { name?: string }).name || "tool"}⟧`;
+						return (b as { name?: string }).name || "tool";
 					default:
-						return `[${b.type}]`;
+						return "";
 				}
 			})
+			.filter(Boolean)
 			.join("\n");
 	}
 	return "";
@@ -39,14 +40,14 @@ export function entrySummary(entry: SessionEntry): string {
 					typeof (entry as { summary?: unknown }).summary === "string"
 						? (entry as { summary: string }).summary
 						: "";
-				return "compact: " + summary.slice(0, 90);
+				return summary.slice(0, 90) || "Compaction";
 			}
 			case "branch_summary": {
 				const summary =
 					typeof (entry as { summary?: unknown }).summary === "string"
 						? (entry as { summary: string }).summary
 						: "";
-				return "branch: " + summary.slice(0, 90);
+				return summary.slice(0, 90) || "Branch Summary";
 			}
 			case "model_change": {
 				const mc = entry as { provider?: string; modelId?: string };
@@ -54,21 +55,19 @@ export function entrySummary(entry: SessionEntry): string {
 			}
 			case "thinking_level_change": {
 				const tlc = entry as { thinkingLevel?: string };
-				return `thinking → ${tlc.thinkingLevel || ""}`;
+				return `level: ${tlc.thinkingLevel || ""}`;
 			}
 			case "custom":
 				return (entry as { customType?: string }).customType || "custom";
 			case "custom_message":
-				return `${(entry as { customType?: string }).customType || "custom"}: ${textOf(
-					(entry as { content?: unknown }).content,
-				).slice(0, 80)}`;
+				return textOf((entry as { content?: unknown }).content).slice(0, 80);
 			case "label": {
 				const le = entry as { label?: string; targetId?: string };
-				return `label: ${le.label || ""} → ${le.targetId || ""}`;
+				return `${le.label || ""}: ${le.targetId || ""}`;
 			}
 			case "session_info": {
 				const se = entry as { name?: string };
-				return `name: ${se.name || ""}`;
+				return se.name || "session";
 			}
 			default:
 				return (entry as { type?: string }).type || "unknown";
@@ -83,15 +82,15 @@ export function entrySummary(entry: SessionEntry): string {
 			return textOf(m.content).slice(0, 140);
 		case "toolResult": {
 			const tr = m as ToolResultMessage;
-			return `${tr.isError ? "✗" : "✓"} ${tr.toolName}  ${textOf(tr.content).slice(0, 70)}`;
+			return `${tr.toolName} ${textOf(tr.content).slice(0, 70)}`;
 		}
 		case "bashExecution": {
 			const bm = m as BashExecutionMessage;
-			return `$ ${bm.command || ""}${bm.output ? `  → ${bm.output.slice(0, 50)}` : ""}`;
+			return bm.command ? `$ ${bm.command}` : "$ command";
 		}
 		case "custom": {
 			const cm = m as CustomMessage;
-			return `${cm.customType || "custom"}: ${textOf(cm.content).slice(0, 90)}`;
+			return textOf(cm.content).slice(0, 90);
 		}
 		default:
 			return (m as { role?: string }).role || "message";

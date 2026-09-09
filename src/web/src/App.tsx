@@ -96,6 +96,7 @@ export const App: React.FC = () => {
 						onSelectId={setSelectedId}
 						follow={follow}
 						totalCount={totalCount}
+						searchQuery={searchQuery}
 					/>
 
 					<Resizer direction="row" onMouseDown={startRowResize} />

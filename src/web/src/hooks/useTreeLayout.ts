@@ -1,12 +1,21 @@
 import { useMemo } from "react";
 import type {
 	SessionSnapshot,
+	SessionEntry,
 	TreeNodeData,
 	FlatTreeNode,
 	NormalizedRole,
 	SessionMessageEntry,
+	ToolResultMessage,
+	BashExecutionMessage,
+	ToolCall,
 } from "../types.ts";
 import { entrySummary, roleOf } from "../utils/formatters.ts";
+import {
+	buildToolPairIndex,
+	findPairedToolCall,
+	formatToolCallSummary,
+} from "../utils/toolPairing.ts";
 
 function cloneTree(nodes: TreeNodeData[]): TreeNodeData[] {
 	return nodes.map((node) => ({
@@ -77,6 +86,24 @@ function buildTreeCells(
 	return cells;
 }
 
+export function entryHasError(e: SessionEntry): boolean {
+	if (e.type === "message") {
+		const msg = (e as SessionMessageEntry).message;
+		if (msg.role === "toolResult" && msg.isError) {
+			return true;
+		}
+		if (msg.role === "bashExecution" && msg.exitCode !== undefined && msg.exitCode !== 0) {
+			return true;
+		}
+		if (msg.role === "assistant" && Boolean(msg.errorMessage)) {
+			return true;
+		}
+	} else if ((e as { type: string }).type === "session_compact_failed") {
+		return true;
+	}
+	return false;
+}
+
 export function useTreeLayout(
 	snapshot: SessionSnapshot | null,
 	filterRole: "all" | NormalizedRole | "error" = "all",
@@ -92,6 +119,7 @@ export function useTreeLayout(
 			return { flatNodes: [], activeIds: new Set(), totalCount: 0, matchCount: 0 };
 		}
 
+		const toolPairIndex = buildToolPairIndex(snapshot.entries || []);
 		const cloned = cloneTree(snapshot.tree);
 		const roots = sortTree(cloned);
 		const activeIds = getActivePathIds(snapshot);
@@ -144,6 +172,45 @@ export function useTreeLayout(
 			const role = roleOf(node.entry);
 			const summary = entrySummary(node.entry);
 			const onPath = activeIds.has(node.entry.id);
+			const isCurrentLeaf = Boolean(snapshot?.leafId && node.entry.id === snapshot.leafId);
+			const hasError = entryHasError(node.entry);
+			const childCount = (node.children || []).length;
+
+			let toolArgs: string | undefined;
+			if (node.entry.type === "message") {
+				const msg = (node.entry as SessionMessageEntry).message;
+				if (msg.role === "toolResult") {
+					const tr = msg as ToolResultMessage;
+					const paired = findPairedToolCall(
+						tr.toolCallId,
+						tr.toolName,
+						node.entry.parentId,
+						toolPairIndex,
+					);
+					if (paired?.toolCall?.arguments) {
+						toolArgs = formatToolCallSummary(tr.toolName, paired.toolCall.arguments);
+					}
+				} else if (msg.role === "bashExecution") {
+					const bm = msg as BashExecutionMessage;
+					if (bm.command) {
+						toolArgs = bm.command;
+					}
+				} else if (msg.role === "assistant" && Array.isArray(msg.content)) {
+					const calls: string[] = [];
+					for (const block of msg.content) {
+						if (block && typeof block === "object" && block.type === "toolCall") {
+							const tc = block as ToolCall;
+							if (tc.name && tc.arguments) {
+								const argStr = formatToolCallSummary(tc.name, tc.arguments);
+								if (argStr) calls.push(argStr);
+							}
+						}
+					}
+					if (calls.length > 0) {
+						toolArgs = calls.join(", ");
+					}
+				}
+			}
 
 			result.push({
 				node,
@@ -157,6 +224,10 @@ export function useTreeLayout(
 				onPath,
 				role,
 				summary,
+				isCurrentLeaf,
+				hasError,
+				childCount,
+				toolArgs,
 			});
 
 			const children = node.children || [];
@@ -196,26 +267,7 @@ export function useTreeLayout(
 		const query = searchQuery.trim().toLowerCase();
 		const filtered = result.filter((item) => {
 			if (filterRole === "error") {
-				const e = item.node.entry;
-				let isErr = false;
-				if (e.type === "message") {
-					const msg = (e as SessionMessageEntry).message;
-					if (msg.role === "toolResult" && msg.isError) {
-						isErr = true;
-					} else if (
-						msg.role === "bashExecution" &&
-						msg.exitCode !== undefined &&
-						msg.exitCode !== 0
-					) {
-						isErr = true;
-					} else if (msg.role === "assistant" && Boolean(msg.errorMessage)) {
-						isErr = true;
-					}
-				} else if ((e as { type: string }).type === "session_compact_failed") {
-					isErr = true;
-				}
-
-				if (!isErr) return false;
+				if (!item.hasError) return false;
 			} else if (filterRole !== "all" && item.role !== filterRole) {
 				return false;
 			}
@@ -223,6 +275,7 @@ export function useTreeLayout(
 			if (query) {
 				const textMatch =
 					item.summary.toLowerCase().includes(query) ||
+					(Boolean(item.toolArgs) && item.toolArgs!.toLowerCase().includes(query)) ||
 					item.node.entry.id.toLowerCase().includes(query) ||
 					(item.node.entry.type === "message" &&
 						typeof (item.node.entry as SessionMessageEntry).message.role === "string" &&

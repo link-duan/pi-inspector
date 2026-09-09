@@ -12,10 +12,11 @@ interface TreeViewProps {
 	onSelectId: (id: string) => void;
 	follow: boolean;
 	totalCount: number;
+	searchQuery?: string;
 }
 
 export const TreeView = forwardRef<TreeViewHandle, TreeViewProps>(
-	({ flatNodes, selectedId, onSelectId, follow, totalCount }, ref) => {
+	({ flatNodes, selectedId, onSelectId, follow, totalCount, searchQuery = "" }, ref) => {
 		const containerRef = useRef<HTMLDivElement | null>(null);
 
 		// Expose imperative DOM scroll method for explicit user navigation events
@@ -106,6 +107,7 @@ export const TreeView = forwardRef<TreeViewHandle, TreeViewProps>(
 						item={item}
 						isSelected={item.node.entry.id === selectedId}
 						onSelect={onSelectId}
+						searchQuery={searchQuery}
 					/>
 				))}
 			</div>

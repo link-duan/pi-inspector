@@ -1,6 +1,6 @@
 {
   "name": "pi-inspector",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Inspect the current pi session: live system prompt and full transcript dashboard in the browser",
   "keywords": [
     "debug",

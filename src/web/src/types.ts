@@ -117,4 +117,8 @@ export interface FlatTreeNode {
 	onPath: boolean;
 	role: NormalizedRole;
 	summary: string;
+	isCurrentLeaf: boolean;
+	hasError: boolean;
+	childCount: number;
+	toolArgs?: string;
 }
